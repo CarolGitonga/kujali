@@ -32,9 +32,8 @@ import { CreateBudgetModalComponent } from '../../components/create-budget-modal
 /** List of all active budgets on the system — Signals Refactor Version */
 export class SelectBudgetPageComponent
 {
-  // -------------------------------------------
-  // 1. Replace constructor DI → inject()
-  // -------------------------------------------
+  
+  //Replace constructor DI → inject()
   private _orgBudgets$$ = inject(OrgBudgetsStore);
   private _budgets$$ = inject(BudgetsStore);
   private _dialog = inject(MatDialog);
@@ -42,9 +41,8 @@ export class SelectBudgetPageComponent
 
   showFilter = false;
 
-  // -------------------------------------------
-  // 2. Convert Observables → Signals
-  // -------------------------------------------
+  
+  // Convert Observables → Signals
   overview = toSignal(
     this._orgBudgets$$.get(),
     { initialValue: {} as OrgBudgetsOverview }
@@ -58,10 +56,9 @@ export class SelectBudgetPageComponent
   // Raw flattened signals used to compute allBudgets
   private overviewRaw = toSignal(this._orgBudgets$$.get(), { initialValue: [] });
   private budgetsRaw  = toSignal(this._budgets$$.get(),    { initialValue: [] });
-
-  // -------------------------------------------
-  // 3. computed(): merge + transform overview + budgets
-  // -------------------------------------------
+  
+  // computed(): merge + transform overview + budgets
+ 
   allBudgets = computed(() => {
     const overview = __flatMap(this.overviewRaw());
     const budgets  = __flatMap(this.budgetsRaw());
@@ -77,9 +74,8 @@ export class SelectBudgetPageComponent
     };
   });
 
-  // -------------------------------------------
-  // 4. effect(): run side effects when signals change
-  // -------------------------------------------
+ 
+  // effect(): run side effects when signals change
   constructor() {
     effect(() => {
       const data = this.allBudgets();
@@ -87,9 +83,7 @@ export class SelectBudgetPageComponent
     });
   }
 
-  // -------------------------------------------
   // 5. Existing business logic (preserved)
-  // -------------------------------------------
 
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
