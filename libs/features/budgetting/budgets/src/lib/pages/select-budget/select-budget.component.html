@@ -13,12 +13,14 @@
     </kujali-finance-toolbar>
 
     <div *ngIf="showFilter" class="filter-section">
-      <!-- <kujali-invoices-filter (filterChanged)='fieldsFilter($event)'>
-			</kujali-invoices-filter> -->
+      <!-- Future filter component -->
     </div>
 
     <div class="table-container">
-      <app-budget-table [budgets$]="allBudgets$"></app-budget-table>
+      <!-- NEW: pass actual reactive Signal value -->
+      <app-budget-table [budgets]="allBudgets().budgets"></app-budget-table>
+      <!-- or if the child expects the whole object: -->
+      <!-- <app-budget-table [budgets]="allBudgets()"></app-budget-table> -->
     </div>
   </div>
 </app-page>
