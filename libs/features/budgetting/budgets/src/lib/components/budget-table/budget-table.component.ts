@@ -25,6 +25,8 @@ export class BudgetTableComponent {
   private _sbS = new SubSink();
 
   @Input() budgets$: Observable<{overview: BudgetRecord[], budgets: any[]}>;
+  // 1. Replace budgets$ (Observable) with budgets (array)
+  @Input() budgets!: any[];
   @Input() canPromote = false;
 
   @Output() doPromote: EventEmitter<void> = new EventEmitter();
