@@ -8,6 +8,7 @@ import { Query } from '@ngfi/firestore-qbuilder';
  */
 export interface Repository<T extends IObject>
 {
+  addNote(arg0: { budgetId: string; content: string; createdBy: string; createdAt: number; }): unknown;
   getDocumentById(id: string): Promise<T>;
   getDocuments(query: Query): Promise<T[]>;
 
