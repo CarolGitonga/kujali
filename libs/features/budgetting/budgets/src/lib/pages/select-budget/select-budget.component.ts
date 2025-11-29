@@ -1,108 +1,141 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+
+import { Component, inject, computed, effect } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 
 import { cloneDeep as ___cloneDeep, flatMap as __flatMap } from 'lodash';
-import { Observable, combineLatest, map, tap } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { Logger } from '@iote/bricks-angular';
 
-import { Budget, BudgetRecord, BudgetStatus, OrgBudgetsOverview } from '@app/model/finance/planning/budgets';
+import {
+  Budget,
+  BudgetRecord,
+  BudgetStatus,
+  OrgBudgetsOverview
+} from '@app/model/finance/planning/budgets';
 
-import { BudgetsStore, OrgBudgetsStore } from '@app/state/finance/budgetting/budgets';
+import {
+  BudgetsStore,
+  OrgBudgetsStore
+} from '@app/state/finance/budgetting/budgets';
 
 import { CreateBudgetModalComponent } from '../../components/create-budget-modal/create-budget-modal.component';
-
 
 @Component({
   selector: 'app-select-budget',
   templateUrl: './select-budget.component.html',
-  styleUrls: ['./select-budget.component.scss', 
-              '../../components/budget-view-styles.scss'],
+  styleUrls: [
+    './select-budget.component.scss',
+    '../../components/budget-view-styles.scss'
+  ],
 })
-/** List of all active budgets on the system. */
-export class SelectBudgetPageComponent implements OnInit
+/** List of all active budgets on the system — Signals Refactor Version */
+export class SelectBudgetPageComponent
 {
-  /** Overview which contains all budgets of an organisation */
-  overview$!: Observable<OrgBudgetsOverview>;
-  sharedBudgets$: Observable<any[]>;
+  // -------------------------------------------
+  // 1. Replace constructor DI → inject()
+  // -------------------------------------------
+  private _orgBudgets$$ = inject(OrgBudgetsStore);
+  private _budgets$$ = inject(BudgetsStore);
+  private _dialog = inject(MatDialog);
+  private _logger = inject(Logger);
 
   showFilter = false;
 
-  // budgetsLoaded: boolean = false;
+  // -------------------------------------------
+  // 2. Convert Observables → Signals
+  // -------------------------------------------
+  overview = toSignal(
+    this._orgBudgets$$.get(),
+    { initialValue: {} as OrgBudgetsOverview }
+  );
 
-  allBudgets$: Observable<{overview: BudgetRecord[], budgets: any[]}>;
+  sharedBudgets = toSignal(
+    this._budgets$$.get(),
+    { initialValue: [] }
+  );
 
-  constructor(private _orgBudgets$$: OrgBudgetsStore,
-              private _budgets$$: BudgetsStore,
-              private _dialog: MatDialog,
-              private _logger: Logger) 
-  { }
+  // Raw flattened signals used to compute allBudgets
+  private overviewRaw = toSignal(this._orgBudgets$$.get(), { initialValue: [] });
+  private budgetsRaw  = toSignal(this._budgets$$.get(),    { initialValue: [] });
 
-  ngOnInit() {
-    this.overview$ = this._orgBudgets$$.get();
-    this.sharedBudgets$ = this._budgets$$.get();
+  // -------------------------------------------
+  // 3. computed(): merge + transform overview + budgets
+  // -------------------------------------------
+  allBudgets = computed(() => {
+    const overview = __flatMap(this.overviewRaw());
+    const budgets  = __flatMap(this.budgetsRaw());
 
-    this.allBudgets$ = combineLatest([this.overview$, this._budgets$$.get()])
-                      .pipe(map(([overview, budgets]) => {return {overview: __flatMap(overview), budgets: __flatMap(budgets)}}),
-                            map((overview) => {
-                              const trBudgets = overview.budgets.map((budget: any) => {budget['endYear'] = budget.startYear + budget.duration - 1; return budget;})
-                              // this.budgetsLoaded = true;
-                              return {overview: overview.overview, budgets: trBudgets}
-                            }));
+    const transformed = budgets.map((b: any) => ({
+      ...b,
+      endYear: b.startYear + b.duration - 1
+    }));
+
+    return {
+      overview,
+      budgets: transformed
+    };
+  });
+
+  // -------------------------------------------
+  // 4. effect(): run side effects when signals change
+  // -------------------------------------------
+  constructor() {
+    effect(() => {
+      const data = this.allBudgets();
+      this._logger.log(() => `Budgets updated. Count: ${data.budgets.length}`);
+    });
   }
+
+  // -------------------------------------------
+  // 5. Existing business logic (preserved)
+  // -------------------------------------------
 
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
-    // this.dataSource.filter = filterValue.trim().toLowerCase();
+    // filter logic can be implemented here
   }
 
-  fieldsFilter(value: (Invoice) => boolean) {    
-    // this.filter$$.next(value);
+  fieldsFilter(value: (Invoice) => boolean) {
+    // reserved for filter functionality
   }
 
-  toogleFilter(value) {
-    // this.showFilter = value
+  toogleFilter(value: boolean) {
+    this.showFilter = value;
   }
 
-  openDialog(parent : Budget | false): void 
-  {
+  openDialog(parent: Budget | false): void {
     const dialog = this._dialog.open(CreateBudgetModalComponent, {
       height: 'fit-content',
       width: '600px',
-      data: parent != null ? parent : false
+      data: parent ?? false
     });
 
     dialog.afterClosed().subscribe(() => {
-      // Dialog after action
-    })
+      // no follow-up action required per original code
+    });
   }
 
-  /** 
-   * @TODO - Review and fix
-   * Returns true if the budget can be activated */
+  /** Whether a budget can be activated */
   canPromote(record: BudgetRecord) {
-    // Get's set on Budget Read from user privileges and budget status.
     return (record.budget as any).canBeActivated;
   }
 
-  /** Activate budget -> Promote to be used in  */
-  setActive(record: BudgetRecord) 
-  {
+  /** Activate a budget */
+  setActive(record: BudgetRecord) {
     const toSave = ___cloneDeep(record.budget);
 
-    // Clean up budget record values.
+    // Remove temporary client-only fields
     delete (toSave as any).canBeActivated;
     delete (toSave as any).access;
 
-    // Set Active
     toSave.status = BudgetStatus.InUse;
+    (record as any).updating = true;
 
-    (<any> record).updating = true;
-    // Fire update
     this._budgets$$.update(toSave)
       .subscribe(() => {
-        (<any> record).updating = false;
-        this._logger.log(() => `Updated Budget with id ${toSave.id}. Set as an active budget for this org.`) 
+        (record as any).updating = false;
+        this._logger.log(() => `Budget ${toSave.id} set to Active`);
       });
   }
 }
