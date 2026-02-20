@@ -12,13 +12,13 @@
       </kujali-finance-search-header-card>
     </kujali-finance-toolbar>
 
-    <div *ngIf="showFilter" class="filter-section">
+    <div *ngIf="showFilter()" class="filter-section">
       <!-- Future filter component -->
     </div>
 
     <div class="table-container">
-      <!-- NEW: pass actual reactive Signal value -->
-      <app-budget-table [budgets]="allBudgets().budgets"></app-budget-table>
+      <!-- Pass the full computed signal value — child reads .overview and .budgets internally -->
+      <app-budget-table [budgets]="allBudgets()"></app-budget-table>
     </div>
   </div>
 </app-page>
