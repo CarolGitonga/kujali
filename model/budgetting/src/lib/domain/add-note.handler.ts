@@ -1,30 +1,50 @@
+import { HandlerTools } from '@iote/cqrs';
+import { FunctionHandler, FunctionContext } from '@ngfi/functions';
+
+import { BudgetNote } from './budget-note.interface';
 import { AddNoteToBudgetCommand } from './add-note.command';
 import { AddNoteToBudgetResult } from './add-note.result';
 
-import { Handler, HandlerContext, HandlerTools } from '@iote/cqrs';
+/** Firestore path for budget notes, scoped to the active org and budget. */
+const BUDGET_NOTES_REPO = (orgId: string, budgetId: string) =>
+  `orgs/${orgId}/budgets/${budgetId}/notes`;
 
-export class AddNoteToBudgetHandler extends Handler<AddNoteToBudgetCommand>
+/**
+ * Handles the AddNoteToBudgetCommand.
+ * Validates the note content, then persists a new BudgetNote document
+ * to Firestore using the CQRS toolkit repository.
+ */
+export class AddNoteToBudgetHandler extends FunctionHandler<AddNoteToBudgetCommand, AddNoteToBudgetResult>
 {
   public async execute(
     command: AddNoteToBudgetCommand,
-    context: HandlerContext,
+    _context: FunctionContext,
     tools: HandlerTools
   ): Promise<AddNoteToBudgetResult>
   {
+    tools.Logger.log(() => `[AddNoteToBudgetHandler].execute: Adding note to budget ${command.budgetId} for org ${command.orgId}`);
+
     // Basic validation
     if (!command.content || command.content.trim().length === 0) {
       throw new Error('Note content cannot be empty.');
     }
 
-    // Get the repo from CQRS toolkit
-    const repo = tools.getRepository('budget-notes');
+    // Get the scoped repository for this org's budget notes
+    const notesRepo = tools.getRepository<BudgetNote>(
+      BUDGET_NOTES_REPO(command.orgId, command.budgetId)
+    );
 
-    await repo.addNote({
+    // Persist the note as a new Firestore document
+    const note: Omit<BudgetNote, 'id'> = {
       budgetId: command.budgetId,
-      content: command.content,
+      content:  command.content.trim(),
       createdBy: command.createdBy,
       createdAt: command.createdAt,
-    });
+    };
+
+    await notesRepo.create(note as BudgetNote);
+
+    tools.Logger.log(() => `[AddNoteToBudgetHandler].execute: Note successfully added to budget ${command.budgetId}`);
 
     return {
       success: true,
