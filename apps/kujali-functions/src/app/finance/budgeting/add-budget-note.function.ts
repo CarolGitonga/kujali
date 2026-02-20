@@ -1,7 +1,7 @@
 import { RestRegistrar } from '@ngfi/functions';
 
 import { KujaliFunction } from '../../../environments/kujali-func.class';
-import { AddNoteToBudgetHandler } from '@app/budget-notes';
+import { AddNoteToBudgetHandler } from '@app/functions/finance/budgeting';
 
 const addNoteToBudgetHandler = new AddNoteToBudgetHandler();
 

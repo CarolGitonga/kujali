@@ -39,9 +39,12 @@ testem.log
 Thumbs.db
 
 .angular
+.nx/
 package-lock.json
 apps/kujali-functions/src/environments/environment.prod.ts
 apps/kujali-functions/src/environments/environment.ts
+apps/kujali/src/environments/environment.ts
+apps/kujali/src/environments/environment.prod.ts
 public
 *.rules
 firebase.json

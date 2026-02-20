@@ -1,9 +1,9 @@
 import { HandlerTools } from '@iote/cqrs';
 import { FunctionHandler, FunctionContext } from '@ngfi/functions';
 
-import { BudgetNote } from './budget-note.interface';
-import { AddNoteToBudgetCommand } from './add-note.command';
-import { AddNoteToBudgetResult } from './add-note.result';
+import { BudgetNote } from '@app/budget-notes';
+import { AddNoteToBudgetCommand } from '@app/budget-notes';
+import { AddNoteToBudgetResult } from '@app/budget-notes';
 
 /** Firestore path for budget notes, scoped to the active org and budget. */
 const BUDGET_NOTES_REPO = (orgId: string, budgetId: string) =>

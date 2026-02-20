@@ -9,6 +9,7 @@ admin.initializeApp(conf);
 
 export * from './app/finance/budgeting/promote-budget.function';
 export * from './app/finance/budgeting/calculate-budget-headers.function';
+export * from './app/finance/budgeting/add-budget-note.function';
 
 export * from './app/data/db/create-surreal-db-payments.function';
 
